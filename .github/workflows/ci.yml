@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tests:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm ci || npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Start static server
+        run: npx serve public -l 5173 &
+
+      - name: Build
+        run: npm run build
+
+      - name: Run API smoke (OpenAPI)
+        env:
+          OPENAPI_URL: ${{ secrets.OPENAPI_URL }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+        run: npm run agent:openapi
+
+      - name: Run UI login smoke
+        env:
+          UI_BASE_URL: http://localhost:5173
+          UI_LOGIN_PATH: /login
+          UI_USERNAME: standard_user
+          UI_PASSWORD: secret_sauce
+        run: npm run test:ui -- --project=chromium
+
+      - name: Upload Playwright report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/**
+            test-results/**
+            allure-results/**
+          if-no-files-found: ignore
+
+      - name: Generate Allure HTML
+        if: always()
+        run: npx allure-commandline generate allure-results -o allure-report --clean || true
+
+      - name: Upload Allure HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report/**
+          if-no-files-found: ignore
+
+  pages:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download Allure report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-report
+          path: ./allure-report
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./allure-report
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
