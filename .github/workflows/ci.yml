@@ -1,6 +1,12 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      ui_url:
+        required: true
+      testcases:
+        required: true
   push:
     branches: [ main ]
   pull_request:
