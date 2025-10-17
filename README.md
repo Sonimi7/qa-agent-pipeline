@@ -1,61 +1,84 @@
 # QA Agent MVP
 
-Набор для демонстрации подхода «агент-тестировщик»:
-- API smoke из OpenAPI спецификации
-- UI login smoke на Playwright
-- Готовый CI workflow (GitHub Actions)
+Демопроект, показывающий «агентный» подход к тестированию:
+- API smoke из OpenAPI (автовыбор безопасных операций)
+- UI smoke авторизации на Playwright
+- Allure-отчёт (локально и публикация в CI)
+
+## Что показать техдиру за 3–5 минут
+1) Клонирование и установка:
+```bash
+git clone https://github.com/Sonimi7/qa-agent-pipeline.git
+cd qa-agent-pipeline
+npm install
+npx playwright install chromium
+```
+
+2) Запуск локальной демо-страницы логина и UI-прогон:
+```bash
+npm run serve              # поднимет http://localhost:5173
+npm run test:ui -- --project=chromium
+```
+После прогона сгенерировать и открыть Allure-отчёт:
+```bash
+npm run allure:generate    # сгенерирует в public/allure-report
+# открыть в браузере:
+open http://localhost:5173/allure-report/
+```
+
+3) API smoke из OpenAPI (демо на публичном Petstore):
+```bash
+export OPENAPI_URL=https://petstore3.swagger.io/api/v3/openapi.json
+export BASE_URL=https://petstore3.swagger.io/api/v3
+export OPENAPI_ALLOWED_METHODS=GET   # безопасные методы
+npm run agent:openapi
+```
 
 ## Требования
 - Node.js 20+
 - macOS/Linux/Windows
 
-## Установка
-
-```bash
-npm install
-npx playwright install chromium
-```
-
-## Переменные окружения
-Создайте файл `.env` в корне и укажите:
-
+## Переменные окружения (опционально через .env)
+Создайте в корне `.env` при необходимости:
 ```bash
 # OpenAPI → API smoke
-OPENAPI_URL= # ссылка на спецификацию (json/yaml)
-BASE_URL=     # базовый URL сервера API
-API_TOKEN=    # Bearer токен (если нужен)
+OPENAPI_URL=
+BASE_URL=
+API_TOKEN=
+OPENAPI_ALLOWED_METHODS=GET
 OPENAPI_SMOKE_PER_TAG=2
 OPENAPI_SMOKE_LIMIT=20
 
 # UI login smoke
-UI_BASE_URL=
+UI_BASE_URL=http://localhost:5173
 UI_LOGIN_PATH=/login
 UI_USERNAME=
 UI_PASSWORD=
-
-# OpenAI (опционально)
-OPENAI_API_KEY=
 ```
 
-## Скрипты
-
+## Полезные npm-скрипты
 ```bash
-# Сборка
-npm run build
-
-# API smoke (из OpenAPI)
-npm run agent:openapi
-
-# UI login smoke
-npm run test:ui -- --project=chromium --reporter=list
+npm run build                 # компиляция TypeScript
+npm run serve                 # статический сервер public на 5173
+npm run agent:openapi         # API smoke (из dist)
+npm run test:ui -- --project=chromium   # UI smoke
+npm run allure:generate       # HTML-отчёт Allure в public/allure-report
 ```
 
-## CI
-В `.github/workflows/ci.yml` настроены два шага: API smoke и UI smoke.
-Секреты для CI:
-- `OPENAPI_URL`, `BASE_URL`, `API_TOKEN`
-- `UI_BASE_URL`, `UI_LOGIN_PATH`, `UI_USERNAME`, `UI_PASSWORD`
+## CI (GitHub Actions)
+Workflow `.github/workflows/ci.yml` делает следующее:
+- Ставит зависимости и браузер Chromium
+- Поднимает локальный статический сервер `serve public -l 5173`
+- Прогоняет UI login smoke c `UI_BASE_URL=http://localhost:5173`
+- Генерирует `allure-report/` и публикует отчёт на GitHub Pages
 
-## Примечания
-- Агент по OpenAPI выбирает ограниченный набор операций (по тэгам) и проверяет 2xx ответы.
-- UI smoke использует эвристические локаторы для типовых форм логина.
+Секреты для расширенного сценария (если будете гонять внешние API):
+- `OPENAPI_URL`, `BASE_URL`, `API_TOKEN`
+
+## Как это работает
+- Агент по OpenAPI выбирает операции без обязательных параметров/тел и выполняет GET-запросы, валидируя 2xx
+- UI smoke использует эвристические локаторы для типовых полей логина (username/password/submit)
+
+## Ссылки
+- Репозиторий: `https://github.com/Sonimi7/qa-agent-pipeline`
+- Allure локально: `http://localhost:5173/allure-report/`

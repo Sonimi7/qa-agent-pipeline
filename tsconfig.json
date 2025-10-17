@@ -9,7 +9,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "esnext",
     "target": "es2022",
-    "types": [],
+    "types": ["node"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -47,5 +47,7 @@
     "noEmitOnError": false,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "playwright.config.ts"]
 }

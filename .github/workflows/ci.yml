@@ -58,6 +58,10 @@ jobs:
           UI_PASSWORD: secret_sauce
         run: npm run test:ui -- --project=chromium
 
+      - name: Run dynamic cases from workflow inputs
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node dist/agents/playwrightCaseRunner.js --url "$UI_URL" --cases ./testcases.json
+
       - name: Upload Playwright report artifacts
         if: always()
         uses: actions/upload-artifact@v4
