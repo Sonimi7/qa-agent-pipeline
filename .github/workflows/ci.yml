@@ -14,7 +14,7 @@ on:
 
 jobs:
   tests:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +30,12 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
+
+      - name: Save workflow inputs
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo "${{ github.event.inputs.testcases }}" > testcases.json
+          echo "UI_URL=${{ github.event.inputs.ui_url }}" >> $GITHUB_ENV
 
       - name: Start static server
         run: npx serve public -l 5173 &
